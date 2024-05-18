@@ -3,7 +3,6 @@ use App\Controllers\HomeController;
 
 $urlPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-// Création d'une instance de RecipeController
 $homeController = new HomeController();
 
 
