@@ -19,7 +19,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
    * 4. renvoyer le CA réel (et les dates)
    */
 
-class CalcRevenueModel
+class CalcRevenueModelOne
 {
 
     private string $filePath = __DIR__ . '/../Data/export-6-7-04-2024.xls';
