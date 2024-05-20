@@ -4,13 +4,16 @@ namespace App\Models;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
+use DateTime;
+use Exception;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
   /**
-   * Objectifs classe : 
+   * Objectifs class : 
    * 
-   * 1. trouver : les dates et les stocker
+   * 1. pour chaque fichier excel 
+   * 1bis. trouver : les dates et les stocker
    * 2. calculer le CA  : nb clients * 25e
    * 3. deduire le montant des annulations/remboursements du CA 
    * 4. renvoyer le CA réel (et les dates)
@@ -19,8 +22,33 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class CalcRevenueModel
 {
 
-    private string $filePath = __DIR__ . '/../Data/export-2-3-03-2024.xls';
-    private int $pricePerStudent = 25;
+    private string $filePath = __DIR__ . '/../Data/export-6-7-04-2024.xls';
+    private int $pricePerStudent1 = 20;
+    private int $pricePerStudent2 = 25;
+    private array $tab = [];
+    private string $dateModifPriceString = '20/03/2024 12:00';
+    private DateTime $dateModifPriceDt;
+
+    public function __construct() {
+
+        //Tranforme en objet datetime la date dateModifPriceString pour pouvoir la comparer
+        $this->dateModifPriceDt = DateTime::createFromFormat('d/m/Y H:i', $this->dateModifPriceString);
+
+        if ($this->dateModifPriceDt === false) {
+            throw new Exception('Invalid date format');
+        }
+    }
+
+
+
+    public function findNameExcelfile()
+    {
+        
+        // Utilisation de pathinfo() pour obtenir le nom du fichier sans l'extension
+        $fileNameWithoutExtension = pathinfo($this->filePath, PATHINFO_FILENAME);
+        
+        return $fileNameWithoutExtension;
+    }
     
     public function excelConnexion(): ?Worksheet
     {
@@ -36,6 +64,8 @@ class CalcRevenueModel
 
     public function calcRevenues(): array
     {
+
+        $findNameExcelfile = $this->findNameExcelfile();
 
         $sheet = $this->excelConnexion();//Connexion au fichier excel
 
@@ -75,44 +105,45 @@ class CalcRevenueModel
         
         $nbLesson = 0;
         $ca = 0;
-        $tab = [];
+        
 
-        for ($row = 1; $row <= $highestRow; $row++) 
+        for ($row = 2; $row <= $highestRow; $row++) 
         {
 
             $cellValuePaiementStatus = $sheet->getCell('O'.$row)->getValue();
             $cellValueNbStudents = $sheet->getCell('L'.$row)->getValue();
             $cellValueTotal = $sheet->getCell('M'.$row)->getValue();
             $cellValueReservationStatus = $sheet->getCell('N'.$row)->getValue();
+            $cellValueCreationDate = $sheet->getCell('C'.$row)->getValue();
 
-            if (is_numeric($cellValueNbStudents) && $cellValuePaiementStatus !== 'Remboursé'){
-
-                $nbLesson += $cellValueNbStudents;
-
-            }
-
-            if ($cellValuePaiementStatus === 'Payé' && $cellValueReservationStatus === 'Terminée') {
+            if ($cellValueReservationStatus === 'Terminée' && $cellValuePaiementStatus === 'Payé') {
 
                 $ca += $cellValueTotal;
-                //var_dump($ca);
+                $nbLesson += $cellValueNbStudents;
+                //var_dump($ca, $nbLesson);
             
                   
              }
-            if ($cellValuePaiementStatus === 'Aucun' && $cellValueReservationStatus === 'Terminée'){
+             if ($cellValueReservationStatus === 'Terminée' && $cellValuePaiementStatus === 'Aucun'){
 
-                /* 'Aucun' signifie pas aucun paiement mais que c'est payé par un abonnement donc 25e*/
-                $ca += $cellValueNbStudents * $this->pricePerStudent;
-                //var_dump($cellValueNbStudents);
+                
+                
+                $cellValueCreationDateDt = DateTime::createFromFormat('d/m/Y H:i', $cellValueCreationDate);//Transform string in DateTime format
+                $ca += $cellValueNbStudents * ($cellValueCreationDateDt < $this->dateModifPriceDt ? $this->pricePerStudent1 : $this->pricePerStudent2);
 
-            }
-            if ($cellValuePaiementStatus === 'Aucun' && $cellValueReservationStatus === 'Annulé'){
-
-                /* 'Aucun' signifie pas aucun paiement mais que c'est payé par un abonnement donc 25e*/
-                $ca += $cellValueNbStudents * $this->pricePerStudent;
-                //var_dump($cellValueNbStudents);
+                $nbLesson += $cellValueNbStudents;
+                //var_dump( $cellValueCreationDateDt, $this->dateModifPriceDt);
 
             }
-            if($cellValuePaiementStatus === 'Remboursé' && $cellValueReservationStatus === 'Annulé'){
+            if ($cellValueReservationStatus === 'Terminée' && $cellValuePaiementStatus === 'Gratuit'){
+
+                /* 'Aucun' signifie pas aucun paiement mais que c'est payé par un abonnement donc 25e*/
+                $ca += $cellValueNbStudents * 0;
+                $nbLesson += $cellValueNbStudents;
+                //var_dump($ca, $nbLesson);
+
+            }
+            if($cellValueReservationStatus === 'Annulé'){
 
                 continue;
 
@@ -126,7 +157,7 @@ class CalcRevenueModel
 
         }
 
-        return $tab = [$ca, $nbLesson, $uniqueDates];
+        return $tab = [$ca, $nbLesson, $uniqueDates, $findNameExcelfile];
         
 
     }

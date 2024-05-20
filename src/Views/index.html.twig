@@ -1,0 +1,45 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Chiffre d'affaire Cours de natation{% endblock %}
+
+{% block body %}
+
+{% set ca = tabData[0] %}
+{% set nbLesson = tabData[1] %}
+{% set uniqueDates = tabData[2] %}
+{% set nameExcelFile = tabData[3] %}
+
+<div class="container">
+  <h1>Chiffre d'affaire Cours de natation</h1>
+  <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">CA brut</th>
+          <th scope="col">Revenues Kineau</th>
+          <th scope="col">Revenues MNS</th>
+          <th scope="col">Revenues net /MNS</th>
+          <th scope="col">Nombre d'élèves</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="table-active">
+            
+              <th scope="row">
+                {% for date, value in uniqueDates %}
+                  {{ date }}<br>
+                {% endfor %}
+              </th>
+
+
+          <td>{{ca}}&euro;</td>
+          <td>{{ca * 0.4}}&euro;</td>
+          <td>{{ca * 0.6}}&euro;</td>
+          <td>{{ca * 0.6 * 0.5}}&euro;</td>
+          <td>{{nbLesson}}</td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+
+{% endblock %}
